@@ -28,23 +28,25 @@ fresh conflicts = head . dropWhile (`member` conflicts) $ nameGen -- This is ugl
 
 -- | @free@ finds all free (Amazing!) variables from given term.
 free :: Term -> Set Name
-free (Var var)           = singleton var
-free (App algo arg)      = free algo `union` free arg
-free (Lam variable body) = variable `delete` free body
+free Var{..} = singleton var
+free App{..} = free algo `union` free arg
+free Lam{..} = variable `delete` free body
 
 -- | @bound@ finds all bounded variables from given term.
 -- This function uses RecordWildCards.
--- If you like it refactor @free@ function.
 bound :: Term -> Set Name
 bound Var{}   = empty
 bound App{..} = bound algo `union` bound arg
 bound Lam{..} = variable `insert` bound body
 
--- a[n := b] - substiturion
+-- a[n := b] - substitution
 substitute :: Term -> Name -> Term -> Term
 substitute v@Var{..} n b | var == n  = b
                          | otherwise = v
-substitute _ _ _ = undefined -- here you have to implement another 2 cases
+substitute App{..} n b                                  = App (substitute algo n b) (substitute arg n b)
+substitute lam@Lam{..} n b | variable == n              = lam
+                           | variable `member` (free b) = substitute (alpha lam (free b)) n b
+                           | otherwise                  = Lam variable (substitute body n b)
 
 -- | alpha reduction
 alpha :: Term -> Set Name -> Term
@@ -56,7 +58,10 @@ beta = undefined
 
 -- | eta reduction
 eta :: Term -> Term
-eta = undefined
+eta lam@(Lam var (App algo (Var variable))) | variable `member` (free algo) = lam 
+                                            | variable == var               = algo
+                                            | otherwise                     = lam 
+eta t = t
 
 -- | reduce term
 reduce :: Term -> Term
