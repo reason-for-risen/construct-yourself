@@ -8,7 +8,7 @@
 module Construction.Internal.Functions
   ( Context (..)        -- make restrictions is good practice. As you can see here,
   , fresh, free, bound  -- we make "public" not all functions, but only Context, fresh, ...
-  , reduce, substitute, alpha, beta, eta
+  , reduce, substitute, alpha, beta, eta, eq
   )where
 
 import           Construction.Internal.Types (Name, Term (..))
@@ -70,6 +70,14 @@ eta lam@(Lam var (App algo (Var variable))) | variable `member` (free algo) = la
                                             | variable == var               = algo
                                             | otherwise                     = lam 
 eta t = t
+
+-- | eq
+eq :: Term -> Term -> Bool
+eq t1 t2 = helper (reduce t1) (reduce t2)
+  where helper v1@Var{..} v2@Var{}               = v1 == v2
+        helper (App algo1 arg1) (App algo2 arg2) = (helper algo1 algo2) && (helper arg1 arg2)
+        helper (Lam var1 body1) (Lam var2 body2) = let termName = Var (fresh (var2 `insert` (free (body1))))
+                                       in helper (substitute body1 var1 termName) (substitute body2 var2 termName)
 
 -- | reduce term
 reduce :: Term -> Term
