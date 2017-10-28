@@ -2,7 +2,7 @@
 
 module Main where
 
-import           Construction (Name, Term (..), bound, free, fresh, alpha, beta, eta, reduce, substitute)
+import           Construction (Name, Term (..), bound, free, fresh, alpha, beta, eta, reduce, substitute, eq)
 import           Test.Hspec
 import Data.Set
 
@@ -17,6 +17,7 @@ main = hspec $ do
     describe "Beta test" testBeta
     describe "Eta test" testEta
     describe "Reduce test" testReduce
+    describe "Eq test" testEq
 
 varX, varX0, varX1, varX2 :: Term
 varX = Var "x"
@@ -72,7 +73,7 @@ testAlpha = do
     it "#4" $ alpha lamId (fromList ["x", "x0", "x1"]) `shouldBe` (Lam "x2" varX2)
 
     let term = (Lam "x2" (Lam "x" appXX1))
-    it "#5" $ alpha term (fromList ["x2"]) `shouldBe` (Lam "x0" (Lam "x0" (App (Var "x0") (Var "x1"))))
+    it "#5" $ alpha term (fromList ["x2"]) `shouldBe` (Lam "x0" (Lam "x" (App (Var "x") (Var "x1"))))
     it "#6" $ alpha term (fromList ["x"]) `shouldBe` (Lam "x2" (Lam "x0" (App (Var "x0") (Var "x1"))))
     it "#7" $ alpha term (fromList ["x", "x2"]) `shouldBe` (Lam "x0" (Lam "x0" (App (Var "x0") (Var "x1"))))
 
@@ -87,6 +88,13 @@ testSubs = do
     it "#7" $ substitute lamK "x1" varX2 `shouldBe` lamK
     it "#8" $ substitute (Lam "x" (App varX varX2)) "x2" varX1 `shouldBe` Lam "x" (App varX varX1)
     it "#9" $ substitute (Lam "x" (App varX varX2)) "x2" appXX1 `shouldBe` Lam "x0" (App varX0 appXX1)
+    
+    let y = Var "y"
+    let z = Var "z"
+    let q = Var "q"
+    let m = Lam "y" (App (App varX y) z)
+    let n = App y q
+    it "#10" $ substitute m "x" n `shouldBe` Lam {variable = "x0", body = App {algo = App {algo = App {algo = Var {var = "y"}, arg = Var {var = "q"}}, arg = Var {var = "x0"}}, arg = Var {var = "z"}}}
 
 testBeta :: SpecWith ()
 testBeta = do
@@ -117,4 +125,14 @@ testReduce = do
     it "#4" $ reduce (App lamK varX) `shouldBe` Lam "x1" varX
     it "#5" $ reduce (App (App lamK varX) varX2) `shouldBe` varX
     it "#6" $ reduce (Lam "x0" (App (App (App lamK varX) varX2) varX0)) `shouldBe` varX
+    
+testEq :: SpecWith ()
+testEq = do
+    it "#1"  $ eq (App lamK lamId) (App (App lamId lamId) lamKK) `shouldBe` True
+    it "#2"  $ eq (Var "x") (Var "x") `shouldBe` True
+    it "#3"  $ eq (Var "x") (Var "y") `shouldBe` False
+    it "#4"  $ eq (App (Var "x") (Var "y")) (App (Var "x") (Var "y")) `shouldBe` True
+    it "#5"  $ eq (App (Var "x") (Var "y")) (App (Var "x") (Var "z")) `shouldBe` False
+    it "#6"  $ eq lamK (Lam  "x" (Lam "x1" (Var "x"))) `shouldBe` True
+    it "#7"  $ eq lamK (Lam  "x2" (Lam "x1" (Var "x2"))) `shouldBe` True
       
