@@ -52,10 +52,9 @@ substitute lam@Lam{..} n b | variable == n              = lam
 alpha :: Term -> Set Name -> Term
 alpha v@Var{..} nameSet                             = v 
 alpha App{..} nameSet                               = App (alpha algo nameSet) (alpha arg nameSet)
-alpha l@Lam{..} nameSet | variable `member` nameSet = Lam v (alpha (substitute body variable v) nameSet)
-                        | otherwise                 = Lam variable (alpha body (variable `insert` nameSet)
-                       where v = fresh (nameSet `union` (free body))
-
+alpha l@Lam{..} nameSet | variable `member` nameSet = let newVar = fresh (nameSet `union` (free body)) 
+                                                      in Lam newVar (alpha (substitute body variable (Var newVar)) nameSet)
+                        | otherwise                 = Lam variable (alpha body (variable `insert` nameSet))
 
 -- | beta reduction
 beta :: Term -> Term
