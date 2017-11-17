@@ -28,15 +28,13 @@ bbLitP :: Parser (Expr Bool)
 bbLitP = Lit <$> bLitP
 
 addP :: Parser (Expr Int)
-addP = (Add <$> (spacedP (bracketP parse) <* char '+') <*> spacedP parse) <|>
-       (Add <$> (iiLitP <* char '+') <*> spacedP parse)
+addP = (Add <$> ((spacedP (bracketP parse) <|> iiLitP ) <* char '+') <*> spacedP parse)
 
 leqP :: Parser (Expr Bool)
 leqP = Leq <$> (parse <* char '<') <*> parse
 
 andP :: Parser (Expr Bool)
-andP = (And <$> (spacedP (bracketP parse) <* string "&&") <*> spacedP parse) <|>
-       (And <$> (bbLitP <* string "&&") <*> spacedP parse)
+andP = (And <$> ((spacedP (bracketP parse) <|> bbLitP ) <* string "&&") <*> spacedP parse)
 
 spacedP :: Parser a -> Parser a
 spacedP p = (many space *> p) <* many space
