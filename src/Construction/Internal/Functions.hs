@@ -11,6 +11,7 @@ module Construction.Internal.Functions
   , reduce, substitute, alpha, beta, eta, eq
   )where
 
+
 import           Construction.Internal.Types (Name, Term (..))
 import           Data.Set                    (Set, delete, empty, insert,
                                               member, notMember, singleton,
@@ -39,6 +40,7 @@ bound Var{}   = empty
 bound App{..} = bound algo `union` bound arg
 bound Lam{..} = variable `insert` bound body
 
+
 -- a[n := b] - substitution
 substitute :: Term -> Name -> Term -> Term
 substitute v@Var{..} n b | var == n  = b
@@ -48,7 +50,6 @@ substitute lam@Lam{..} n b | variable == n              = lam
                            | variable `member` (free b) = substitute (alpha lam (free b)) n b
                            | otherwise                  = Lam variable (substitute body n b)
 
--- | alpha reduction
 alpha :: Term -> Set Name -> Term
 alpha v@Var{..} nameSet                             = v 
 alpha App{..} nameSet                               = App (alpha algo nameSet) (alpha arg nameSet)
@@ -56,14 +57,13 @@ alpha l@Lam{..} nameSet | variable `member` nameSet = let newVar = fresh (nameSe
                                                       in Lam newVar (alpha (substitute body variable (Var newVar)) nameSet)
                         | otherwise                 = Lam variable (alpha body (variable `insert` nameSet))
 
--- | beta reduction
 beta :: Term -> Term
 beta (App Lam{..} arg) = substitute (beta body) variable (beta arg)
 beta App{..}           = App (beta algo) (beta arg)
 beta Lam{..}           = Lam variable (beta body)
 beta v@Var{..}         = v
 
--- | eta reduction
+
 eta :: Term -> Term
 eta lam@(Lam var (App algo (Var variable))) | variable `member` (free algo) = lam 
                                             | variable == var               = algo
@@ -77,6 +77,18 @@ eq t1 t2 = helper (reduce t1) (reduce t2)
         helper (App algo1 arg1) (App algo2 arg2) = (helper algo1 algo2) && (helper arg1 arg2)
         helper (Lam var1 body1) (Lam var2 body2) = let termName = Var (fresh (var2 `insert` (free (body1))))
                                        in helper (substitute body1 var1 termName) (substitute body2 var2 termName)
+
+
+instance Eq Term where
+  Var v1 == Var v2 = v1 == v2
+  App algo1 arg1 == App algo2 arg2 = algo1 == algo2 && arg1 == arg2
+  Lam v1 b1 == Lam v2 b2 = sub1 == sub2
+    where
+      freshVar = Var $ fresh $ free b1 `union` free b2
+      sub1 = substitute b1 v1 freshVar
+      sub2 = substitute b2 v2 freshVar
+  _ == _ = False
+
 
 -- | reduce term
 reduce :: Term -> Term
