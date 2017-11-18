@@ -28,13 +28,15 @@ bbLitP :: Parser (Expr Bool)
 bbLitP = Lit <$> bLitP
 
 addP :: Parser (Expr Int)
-addP = try $ Add <$> ((iiLitP <|> (bracketP addP) <|> (bracketP iiLitP)) <* char '+') <*> parse
+addP = let adP = (iiLitP <|> (bracketP addP) <|> (bracketP iiLitP))
+        in try $ Add <$> (adP <* char '+') <*> parse
 
 leqP :: Parser (Expr Bool)
 leqP = try $ Leq <$> (parse <* char '<') <*> parse
 
 andP :: Parser (Expr Bool)
-andP = try $ And <$> ((leqP <|> bbLitP <|> (bracketP leqP) <|> (bracketP bbLitP) <|> (bracketP andP)) <* string "&&") <*> parse
+andP = let anP = (leqP <|> bbLitP <|> (bracketP leqP) <|> (bracketP bbLitP) <|> (bracketP andP))
+        in try $ And <$> (anP <* string "&&") <*> parse
 
 spacedP :: Parser a -> Parser a
 spacedP p = (many space *> p) <* many space
@@ -47,7 +49,7 @@ class MyParse a where
 
 
 instance MyParse Int where
-    parse = addP <|> iiLitP <|> (bracketP addP) <|> (bracketP iiLitP)
+    parse = addP <|> iiLitP <|> (bracketP parse)
 
 instance MyParse Bool where
-    parse = andP <|> leqP <|> bbLitP <|> (bracketP andP) <|> (bracketP leqP) <|> (bracketP bbLitP)
+    parse = andP <|> leqP <|> bbLitP <|> (bracketP parse)
